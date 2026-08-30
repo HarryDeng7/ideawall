@@ -20,7 +20,8 @@ const eraserBtn = document.getElementById("eraserBtn");
 /* ============ constants ============ */
 const STORAGE_NOTES = "ideaWall.notes";
 const STORAGE_DRAWING = "ideaWall.drawing";
-const NOTE_COLORS = ["#fef08a", "#fda4af", "#86efac", "#93c5fd", "#fdba74", "#c4b5fd"];
+const NOTE_COLOR = "#fff176"; // classic sticky-note yellow
+const PEN_COLOR = "rgba(43, 27, 13, 0.88)"; // dark marker on the wood wall
 const PEN_WIDTH = 3;
 const ERASER_WIDTH = 42;
 const DRAG_THRESHOLD = 5; // px of movement before a right-press becomes drawing
@@ -29,7 +30,7 @@ const DRAG_THRESHOLD = 5; // px of movement before a right-press becomes drawing
 let notes = [];           // { id, x, y, text, color, rot }
 let tool = "draw";        // "draw" | "eraser"
 let savedDrawing = null;  // last drawing snapshot (dataURL)
-let pressed = null;       // right-button press point { x, y }
+let pressed = null;       // press point { x, y, button }
 let strokeActive = false; // right-drag has become a stroke
 let addBox = null;        // current add-note input element
 let currentId = null;     // note id shown in the modal
@@ -80,7 +81,7 @@ function renderNotes() {
     el.dataset.id = note.id;
     el.style.left = note.x + "px";
     el.style.top = note.y + "px";
-    el.style.background = note.color;
+    el.style.background = NOTE_COLOR;
     el.style.transform = "rotate(" + note.rot + "deg)";
     const p = document.createElement("p");
     p.className = "note-text";
@@ -97,7 +98,6 @@ function addNote(x, y, text) {
     x: Math.round(Math.max(8, Math.min(wall.clientWidth - 160, x - 76))),
     y: Math.round(Math.max(64, Math.min(wall.clientHeight - 120, y - 60))),
     text: text,
-    color: NOTE_COLORS[Math.floor(Math.random() * NOTE_COLORS.length)],
     rot: (Math.random() * 8 - 4).toFixed(1)
   };
   notes.push(note);
@@ -156,7 +156,7 @@ function openModal(note) {
   currentId = note.id;
   modalText.textContent = note.text;
   modalEdit.value = note.text;
-  modalNote.style.background = note.color;
+  modalNote.style.background = NOTE_COLOR;
   modalText.classList.remove("hidden");
   modalEdit.classList.add("hidden");
   editBtn.classList.remove("hidden");
@@ -212,14 +212,14 @@ function setTool(t) {
 drawBtn.addEventListener("click", function () { setTool("draw"); });
 eraserBtn.addEventListener("click", function () { setTool("eraser"); });
 
-/* ============ right-click: quick = add note, drag = draw ============ */
+/* ============ drawing: quick right-click = add note, drag (left or right) = draw ============ */
 wall.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 
 wall.addEventListener("mousedown", function (e) {
-  if (e.button !== 2) return;
+  if (e.button !== 0 && e.button !== 2) return;
   if (e.target.closest(".note") || e.target.closest(".add-note")) return;
-  e.preventDefault();
-  pressed = { x: e.clientX, y: e.clientY };
+  if (e.button === 2) e.preventDefault();
+  pressed = { x: e.clientX, y: e.clientY, button: e.button };
   strokeActive = false;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
@@ -236,7 +236,7 @@ wall.addEventListener("mousemove", function (e) {
     if (addBox) { addBox.remove(); addBox = null; }
     if (tool === "draw") {
       ctx.globalCompositeOperation = "source-over";
-      ctx.strokeStyle = "rgba(241, 245, 249, 0.85)";
+      ctx.strokeStyle = PEN_COLOR;
       ctx.lineWidth = PEN_WIDTH;
     } else {
       ctx.globalCompositeOperation = "destination-out";
@@ -250,12 +250,13 @@ wall.addEventListener("mousemove", function (e) {
 });
 
 window.addEventListener("mouseup", function (e) {
-  if (e.button !== 2 || !pressed) return;
+  if (!pressed || e.button !== pressed.button) return;
   const wasDrawing = strokeActive;
+  const button = pressed.button;
   pressed = null;
   strokeActive = false;
   if (wasDrawing) saveDrawing();
-  else openAddBox(e.clientX, e.clientY);
+  else if (button === 2) openAddBox(e.clientX, e.clientY);
 });
 
 window.addEventListener("blur", function () {

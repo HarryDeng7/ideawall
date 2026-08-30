@@ -84,15 +84,20 @@ body {
   position: fixed;
   inset: 0;
   cursor: crosshair;
-  background-color: var(--bg);
+  background-color: #b08a5a; /* warm brown-white wood */
   background-image:
-    radial-gradient(ellipse at 15% 20%, rgba(30, 41, 59, 0.6), transparent 55%),
-    radial-gradient(ellipse at 85% 78%, rgba(30, 41, 59, 0.55), transparent 50%),
-    radial-gradient(ellipse at 55% 45%, rgba(245, 158, 11, 0.05), transparent 60%),
-    radial-gradient(rgba(148, 163, 184, 0.09) 1px, transparent 1.5px);
-  background-size: auto, auto, auto, 26px 26px;
-  background-position: 0 0, 0 0, 0 0, 0 0;
-  background-repeat: no-repeat, no-repeat, no-repeat, repeat;
+    /* horizontal plank joints */
+    repeating-linear-gradient(0deg,
+      transparent 0 118px,
+      rgba(84, 54, 27, 0.25) 118px 121px),
+    /* fine wood grain */
+    repeating-linear-gradient(93deg,
+      rgba(255, 246, 224, 0.06) 0 2px, transparent 2px 9px),
+    /* light wash for the brown-white feel */
+    radial-gradient(ellipse at 50% 0%, rgba(255, 248, 230, 0.22), transparent 62%),
+    /* soft vignette */
+    radial-gradient(ellipse at center, transparent 52%, rgba(70, 44, 18, 0.38) 100%);
+  background-repeat: repeat, repeat, no-repeat, no-repeat;
 }
 
 #drawCanvas { position: absolute; inset: 0; }
@@ -147,7 +152,7 @@ body {
   z-index: 10;
   width: 184px;
   padding: 10px;
-  background: #fef08a;
+  background: #fff176;
   border-radius: 3px;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
   animation: pop .15s ease-out;
@@ -245,7 +250,7 @@ body {
   color: var(--muted);
   pointer-events: none;
 }
-.empty-title { font-size: 22px; font-weight: 600; color: #64748b; }
-.empty-hint p:last-child { font-size: 14px; }
+.empty-title { font-size: 22px; font-weight: 600; color: #5c4224; }
+.empty-hint p:last-child { font-size: 14px; color: #6f5533; }
 
 .hidden { display: none !important; }
