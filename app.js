@@ -37,21 +37,32 @@ let currentId = null;     // note id shown in the modal
 
 /* ============ drawing layer ============ */
 function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.round(wall.clientWidth * dpr);
-  canvas.height = Math.round(wall.clientHeight * dpr);
+  canvas.width = Math.round(rect.width * dpr);
+  canvas.height = Math.round(rect.height * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  redrawDrawing();
+  redrawDrawing(rect.width, rect.height);
 }
 
-function redrawDrawing() {
-  ctx.clearRect(0, 0, wall.clientWidth, wall.clientHeight);
+function redrawDrawing(w, h) {
+  ctx.clearRect(0, 0, w, h);
   if (!savedDrawing) return;
   const img = new Image();
   img.onload = function () {
-    ctx.drawImage(img, 0, 0, wall.clientWidth, wall.clientHeight);
+    ctx.drawImage(img, 0, 0, w, h);
   };
   img.src = savedDrawing;
+}
+
+/* maps a mouse event to canvas buffer coordinates, so ink lands
+   exactly under the cursor regardless of zoom or display scaling */
+function canvasPoint(e) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left) * (canvas.width / rect.width),
+    y: (e.clientY - rect.top) * (canvas.height / rect.height)
+  };
 }
 
 function saveDrawing() {
@@ -221,10 +232,11 @@ wall.addEventListener("mousedown", function (e) {
   if (e.button === 2) e.preventDefault();
   pressed = { x: e.clientX, y: e.clientY, button: e.button };
   strokeActive = false;
+  const start = canvasPoint(e);
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   ctx.beginPath();
-  ctx.moveTo(e.clientX, e.clientY);
+  ctx.moveTo(start.x, start.y);
 });
 
 wall.addEventListener("mousemove", function (e) {
@@ -243,10 +255,11 @@ wall.addEventListener("mousemove", function (e) {
       ctx.lineWidth = ERASER_WIDTH;
     }
   }
-  ctx.lineTo(e.clientX, e.clientY);
+  const point = canvasPoint(e);
+  ctx.lineTo(point.x, point.y);
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(e.clientX, e.clientY);
+  ctx.moveTo(point.x, point.y);
 });
 
 window.addEventListener("mouseup", function (e) {
