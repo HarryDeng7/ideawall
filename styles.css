@@ -61,11 +61,31 @@ body {
 }
 @media (max-width: 720px) { .hint { display: none; } }
 
+.tool-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s, transform .12s;
+}
+.tool-btn:hover { color: var(--text); border-color: rgba(245, 158, 11, 0.6); transform: translateY(-1px); }
+.tool-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0f172a;
+}
+
 /* ---------- wall ---------- */
 .wall {
   position: fixed;
   inset: 0;
-  cursor: crosshair;
+  cursor: default;
   background-color: #b08a5a; /* warm brown-white wood */
   background-image:
     /* horizontal plank joints */

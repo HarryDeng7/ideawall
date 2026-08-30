@@ -14,6 +14,8 @@ const editBtn = document.getElementById("editBtn");
 const saveBtn = document.getElementById("saveBtn");
 const deleteBtn = document.getElementById("deleteBtn");
 const closeBtn = document.getElementById("closeBtn");
+const penBtn = document.getElementById("penBtn");
+const eraserBtn = document.getElementById("eraserBtn");
 
 /* ============ constants ============ */
 const STORAGE_NOTES = "ideaWall.notes";
@@ -26,6 +28,7 @@ const DRAG_THRESHOLD = 5; // px of movement before a right-press becomes drawing
 
 /* ============ state ============ */
 let notes = [];           // { id, x, y, text, color, rot }
+let activeTool = null;    // null | "draw" | "eraser" (picked in the toolbar)
 let savedDrawing = null;  // last drawing snapshot (dataURL)
 let pressed = null;       // press point { x, y, button }
 let strokeActive = false; // a drag has become a stroke
@@ -211,14 +214,29 @@ modalEdit.addEventListener("keydown", function (e) {
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) saveBtn.click();
 });
 
-/* ============ drawing: quick right-click = add note, left-drag = draw, right-drag = erase ============ */
+/* ============ tools ============ */
+function setTool(t) {
+  activeTool = (activeTool === t) ? null : t;
+  penBtn.classList.toggle("active", activeTool === "draw");
+  eraserBtn.classList.toggle("active", activeTool === "eraser");
+  wall.style.cursor = activeTool === "draw" ? "crosshair" : (activeTool === "eraser" ? "cell" : "default");
+}
+penBtn.addEventListener("click", function () { setTool("draw"); });
+eraserBtn.addEventListener("click", function () { setTool("eraser"); });
+
+/* ============ drawing: quick right-click = add note, left-drag with a picked tool = draw or erase ============ */
 wall.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 
 wall.addEventListener("mousedown", function (e) {
   if (e.button !== 0 && e.button !== 2) return;
   if (e.target.closest(".note") || e.target.closest(".add-note")) return;
-  if (e.button === 2) e.preventDefault();
-  pressed = { x: e.clientX, y: e.clientY, button: e.button };
+  if (e.button === 2) {
+    e.preventDefault();
+    pressed = { x: e.clientX, y: e.clientY, button: 2 };
+    return; // right button only adds a note on quick click
+  }
+  if (!activeTool) return; // left button needs a picked tool
+  pressed = { x: e.clientX, y: e.clientY, button: 0 };
   strokeActive = false;
   const start = canvasPoint(e);
   ctx.lineCap = "round";
@@ -229,12 +247,13 @@ wall.addEventListener("mousedown", function (e) {
 
 wall.addEventListener("mousemove", function (e) {
   if (!pressed) return;
+  if (pressed.button !== 0) return;
   if (!strokeActive) {
     const moved = Math.hypot(e.clientX - pressed.x, e.clientY - pressed.y) > DRAG_THRESHOLD;
     if (!moved) return;
     strokeActive = true;
     if (addBox) { addBox.remove(); addBox = null; }
-    if (pressed.button === 2) {
+    if (activeTool === "eraser") {
       ctx.globalCompositeOperation = "destination-out";
       ctx.lineWidth = ERASER_WIDTH;
     } else {

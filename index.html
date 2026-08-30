@@ -11,7 +11,13 @@
 <header class="topbar">
   <h1 class="logo">Idea Wall</h1>
   <div class="tools">
-    <span class="hint">Right-click to add an idea - hold left to draw, hold right to erase</span>
+    <span class="hint">Right-click to add an idea - pick a tool, then hold left click</span>
+    <button id="penBtn" class="tool-btn" type="button" title="Draw">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>
+    </button>
+    <button id="eraserBtn" class="tool-btn" type="button" title="Erase">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
+    </button>
   </div>
 </header>
 
