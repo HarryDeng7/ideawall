@@ -1,0 +1,46 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Idea Wall</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <h1 class="logo">Idea Wall</h1>
+  <div class="tools">
+    <span class="hint">Right-click the wall to add an idea - hold right-click and drag to draw</span>
+    <button id="drawBtn" class="tool-btn active" type="button">Draw</button>
+    <button id="eraserBtn" class="tool-btn" type="button">Eraser</button>
+  </div>
+</header>
+
+<main id="wall" class="wall">
+  <canvas id="drawCanvas"></canvas>
+  <div id="notesLayer" class="notes-layer"></div>
+  <div id="emptyHint" class="empty-hint hidden">
+    <p class="empty-title">Your wall is empty</p>
+    <p>Right-click anywhere to stick your first idea</p>
+  </div>
+</main>
+
+<div id="noteModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <div id="modalNote" class="modal-note">
+      <p id="modalText" class="modal-text"></p>
+      <textarea id="modalEdit" class="modal-edit hidden"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button id="editBtn" class="btn" type="button">Edit</button>
+      <button id="saveBtn" class="btn btn-accent hidden" type="button">Save</button>
+      <button id="deleteBtn" class="btn btn-danger" type="button">Delete</button>
+      <button id="closeBtn" class="btn btn-ghost" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
