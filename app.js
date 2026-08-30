@@ -14,8 +14,6 @@ const editBtn = document.getElementById("editBtn");
 const saveBtn = document.getElementById("saveBtn");
 const deleteBtn = document.getElementById("deleteBtn");
 const closeBtn = document.getElementById("closeBtn");
-const drawBtn = document.getElementById("drawBtn");
-const eraserBtn = document.getElementById("eraserBtn");
 
 /* ============ constants ============ */
 const STORAGE_NOTES = "ideaWall.notes";
@@ -28,10 +26,9 @@ const DRAG_THRESHOLD = 5; // px of movement before a right-press becomes drawing
 
 /* ============ state ============ */
 let notes = [];           // { id, x, y, text, color, rot }
-let tool = "draw";        // "draw" | "eraser"
 let savedDrawing = null;  // last drawing snapshot (dataURL)
 let pressed = null;       // press point { x, y, button }
-let strokeActive = false; // right-drag has become a stroke
+let strokeActive = false; // a drag has become a stroke
 let addBox = null;        // current add-note input element
 let currentId = null;     // note id shown in the modal
 
@@ -214,16 +211,7 @@ modalEdit.addEventListener("keydown", function (e) {
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) saveBtn.click();
 });
 
-/* ============ tools ============ */
-function setTool(t) {
-  tool = t;
-  drawBtn.classList.toggle("active", t === "draw");
-  eraserBtn.classList.toggle("active", t === "eraser");
-}
-drawBtn.addEventListener("click", function () { setTool("draw"); });
-eraserBtn.addEventListener("click", function () { setTool("eraser"); });
-
-/* ============ drawing: quick right-click = add note, drag (left or right) = draw ============ */
+/* ============ drawing: quick right-click = add note, left-drag = draw, right-drag = erase ============ */
 wall.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 
 wall.addEventListener("mousedown", function (e) {
@@ -246,13 +234,13 @@ wall.addEventListener("mousemove", function (e) {
     if (!moved) return;
     strokeActive = true;
     if (addBox) { addBox.remove(); addBox = null; }
-    if (tool === "draw") {
+    if (pressed.button === 2) {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.lineWidth = ERASER_WIDTH;
+    } else {
       ctx.globalCompositeOperation = "source-over";
       ctx.strokeStyle = PEN_COLOR;
       ctx.lineWidth = PEN_WIDTH;
-    } else {
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.lineWidth = ERASER_WIDTH;
     }
   }
   const point = canvasPoint(e);
