@@ -98,7 +98,9 @@ function redrawDrawing(w, h) {
   if (!wl || !wl.drawing) return;
   const img = new Image();
   img.onload = function () {
-    ctx.drawImage(img, 0, 0, w, h);
+    // draw 1:1 (natural size): ink keeps its original position even
+    // after the window resizes - never stretch it to the new size
+    ctx.drawImage(img, 0, 0);
   };
   img.src = wl.drawing;
 }
@@ -382,9 +384,13 @@ document.addEventListener("mousemove", function (e) {
     return;
   }
   toolCursor.classList.remove("hidden");
-  const r = wall.getBoundingClientRect();
-  toolCursor.style.left = (e.clientX - r.left) + "px";
-  toolCursor.style.top = (e.clientY - r.top) + "px";
+  // anchor the icon to the exact point the ink will land on, computed
+  // through the same buffer mapping the drawing itself uses
+  const crect = canvas.getBoundingClientRect();
+  const point = canvasPoint(e);
+  const wrect = wall.getBoundingClientRect();
+  toolCursor.style.left = (crect.left + point.x * (crect.width / canvas.width) - wrect.left) + "px";
+  toolCursor.style.top = (crect.top + point.y * (crect.height / canvas.height) - wrect.top) + "px";
 });
 document.documentElement.addEventListener("mouseleave", function () {
   toolCursor.classList.add("hidden");
