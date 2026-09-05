@@ -6,6 +6,8 @@ const canvas = document.getElementById("drawCanvas");
 const ctx = canvas.getContext("2d");
 const notesLayer = document.getElementById("notesLayer");
 const emptyHint = document.getElementById("emptyHint");
+const emptyTitle = document.getElementById("emptyTitle");
+const wallBar = document.getElementById("wallBar");
 const modal = document.getElementById("noteModal");
 const modalNote = document.getElementById("modalNote");
 const modalText = document.getElementById("modalText");
@@ -18,26 +20,67 @@ const penBtn = document.getElementById("penBtn");
 const eraserBtn = document.getElementById("eraserBtn");
 
 /* ============ constants ============ */
-const STORAGE_NOTES = "ideaWall.notes";
+const STORAGE_WALLS = "ideaWall.walls";
+const STORAGE_CURRENT = "ideaWall.current";
+const STORAGE_NOTES = "ideaWall.notes";     // legacy keys (single-wall era)
 const STORAGE_DRAWING = "ideaWall.drawing";
-const NOTE_COLOR = "#fff176"; // classic sticky-note yellow
+const NOTE_COLOR = "#fff176";               // classic sticky-note yellow
 const PEN_COLOR = "rgba(43, 27, 13, 0.88)"; // dark marker on the wood wall
 const PEN_WIDTH = 3;
 const ERASER_WIDTH = 42;
-const DRAG_THRESHOLD = 5; // px of movement before a right-press becomes drawing
+const DRAG_THRESHOLD = 5; // px of movement before a press becomes a stroke
 
 /* ============ state ============ */
-let notes = [];           // { id, x, y, text, color, rot }
-let activeTool = null;    // null | "draw" | "eraser" (picked in the toolbar)
-let savedDrawing = null;  // last drawing snapshot (dataURL)
-let pressed = null;       // press point { x, y, button }
+let walls = [];          // { id, name, notes: [...], drawing: dataURL|null }
+let currentWallId = null;
+let activeTool = null;   // null | "draw" | "eraser" (picked in the toolbar)
+let pressed = null;      // press point { x, y, button }
 let strokeActive = false; // a drag has become a stroke
-let addBox = null;        // current add-note input element
-let currentId = null;     // note id shown in the modal
+let addBox = null;       // current add-note input element
+let currentNoteId = null; // note id shown in the modal
+
+/* ============ walls ============ */
+function currentWall() {
+  return walls.find(function (w) { return w.id === currentWallId; }) || null;
+}
+
+function newId(prefix) {
+  return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function saveWalls() {
+  localStorage.setItem(STORAGE_WALLS, JSON.stringify(walls));
+  localStorage.setItem(STORAGE_CURRENT, currentWallId);
+}
+
+function loadWalls() {
+  try {
+    const raw = localStorage.getItem(STORAGE_WALLS);
+    walls = raw ? JSON.parse(raw) : [];
+  } catch (err) {
+    walls = [];
+  }
+  currentWallId = localStorage.getItem(STORAGE_CURRENT) || null;
+
+  if (!walls.length) {
+    // migrate legacy single-wall data if it exists
+    let legacyNotes = [];
+    try {
+      const raw = localStorage.getItem(STORAGE_NOTES);
+      legacyNotes = raw ? JSON.parse(raw) : [];
+    } catch (err) {
+      legacyNotes = [];
+    }
+    const legacyDrawing = localStorage.getItem(STORAGE_DRAWING) || null;
+    walls.push({ id: newId("w"), name: "My Wall", notes: legacyNotes, drawing: legacyDrawing });
+  }
+  if (!currentWall()) currentWallId = walls[0].id;
+  saveWalls();
+}
 
 /* ============ drawing layer ============ */
 function resizeCanvas() {
-  const rect = canvas.getBoundingClientRect();
+  const rect = wall.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
   canvas.width = Math.round(rect.width * dpr);
   canvas.height = Math.round(rect.height * dpr);
@@ -47,12 +90,13 @@ function resizeCanvas() {
 
 function redrawDrawing(w, h) {
   ctx.clearRect(0, 0, w, h);
-  if (!savedDrawing) return;
+  const wl = currentWall();
+  if (!wl || !wl.drawing) return;
   const img = new Image();
   img.onload = function () {
     ctx.drawImage(img, 0, 0, w, h);
   };
-  img.src = savedDrawing;
+  img.src = wl.drawing;
 }
 
 /* maps a mouse event to canvas buffer coordinates, so ink lands
@@ -65,28 +109,30 @@ function canvasPoint(e) {
   };
 }
 
-function saveDrawing() {
-  savedDrawing = canvas.toDataURL();
-  localStorage.setItem(STORAGE_DRAWING, savedDrawing);
-}
-
-/* ============ notes ============ */
-function loadNotes() {
-  try {
-    const raw = localStorage.getItem(STORAGE_NOTES);
-    notes = raw ? JSON.parse(raw) : [];
-  } catch (err) {
-    notes = [];
+function applyTool(t) {
+  if (t === "eraser") {
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.lineWidth = ERASER_WIDTH;
+  } else {
+    ctx.globalCompositeOperation = "source-over";
+    ctx.strokeStyle = PEN_COLOR;
+    ctx.lineWidth = PEN_WIDTH;
   }
 }
 
-function saveNotes() {
-  localStorage.setItem(STORAGE_NOTES, JSON.stringify(notes));
+function saveDrawing() {
+  const wl = currentWall();
+  if (!wl) return;
+  wl.drawing = canvas.toDataURL();
+  saveWalls();
 }
 
+/* ============ notes ============ */
 function renderNotes() {
   notesLayer.innerHTML = "";
-  notes.forEach(function (note) {
+  const wl = currentWall();
+  if (!wl) return;
+  wl.notes.forEach(function (note) {
     const el = document.createElement("div");
     el.className = "note";
     el.dataset.id = note.id;
@@ -100,19 +146,22 @@ function renderNotes() {
     el.appendChild(p);
     notesLayer.appendChild(el);
   });
-  emptyHint.classList.toggle("hidden", notes.length > 0);
+  emptyHint.classList.toggle("hidden", wl.notes.length > 0);
+  emptyTitle.textContent = wl.name + " is empty";
 }
 
 function addNote(x, y, text) {
+  const wl = currentWall();
+  if (!wl) return;
   const note = {
-    id: "n" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    id: newId("n"),
     x: Math.round(Math.max(8, Math.min(wall.clientWidth - 160, x - 76))),
     y: Math.round(Math.max(64, Math.min(wall.clientHeight - 120, y - 60))),
     text: text,
     rot: (Math.random() * 8 - 4).toFixed(1)
   };
-  notes.push(note);
-  saveNotes();
+  wl.notes.push(note);
+  saveWalls();
   renderNotes();
 }
 
@@ -159,12 +208,14 @@ function openAddBox(x, y) {
 notesLayer.addEventListener("click", function (e) {
   const el = e.target.closest(".note");
   if (!el) return;
-  const note = notes.find(function (n) { return n.id === el.dataset.id; });
+  const wl = currentWall();
+  if (!wl) return;
+  const note = wl.notes.find(function (n) { return n.id === el.dataset.id; });
   if (note) openModal(note);
 });
 
 function openModal(note) {
-  currentId = note.id;
+  currentNoteId = note.id;
   modalText.textContent = note.text;
   modalEdit.value = note.text;
   modalNote.style.background = NOTE_COLOR;
@@ -177,7 +228,7 @@ function openModal(note) {
 
 function closeModal() {
   modal.classList.add("hidden");
-  currentId = null;
+  currentNoteId = null;
 }
 
 editBtn.addEventListener("click", function () {
@@ -189,20 +240,26 @@ editBtn.addEventListener("click", function () {
 });
 
 saveBtn.addEventListener("click", function () {
-  const note = notes.find(function (n) { return n.id === currentId; });
+  const wl = currentWall();
   const text = modalEdit.value.trim();
-  if (note && text) {
-    note.text = text;
-    saveNotes();
-    renderNotes();
+  if (wl && text) {
+    const note = wl.notes.find(function (n) { return n.id === currentNoteId; });
+    if (note) {
+      note.text = text;
+      saveWalls();
+      renderNotes();
+    }
   }
   closeModal();
 });
 
 deleteBtn.addEventListener("click", function () {
-  notes = notes.filter(function (n) { return n.id !== currentId; });
-  saveNotes();
-  renderNotes();
+  const wl = currentWall();
+  if (wl) {
+    wl.notes = wl.notes.filter(function (n) { return n.id !== currentNoteId; });
+    saveWalls();
+    renderNotes();
+  }
   closeModal();
 });
 
@@ -213,6 +270,89 @@ modal.addEventListener("mousedown", function (e) {
 modalEdit.addEventListener("keydown", function (e) {
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) saveBtn.click();
 });
+
+/* ============ wall tabs ============ */
+function renderWallBar() {
+  wallBar.innerHTML = "";
+  walls.forEach(function (w) {
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.className = "wall-tab" + (w.id === currentWallId ? " active" : "");
+    tab.title = "Double-click to rename";
+
+    const name = document.createElement("span");
+    name.className = "wall-tab-name";
+    name.textContent = w.name;
+    tab.appendChild(name);
+
+    if (walls.length > 1) {
+      const del = document.createElement("span");
+      del.className = "wall-tab-del";
+      del.textContent = "\u00d7";
+      del.title = "Delete wall";
+      del.addEventListener("click", function (e) {
+        e.stopPropagation();
+        deleteWall(w.id);
+      });
+      tab.appendChild(del);
+    }
+
+    tab.addEventListener("click", function () { switchWall(w.id); });
+    tab.addEventListener("dblclick", function () {
+      const name2 = window.prompt("Rename this wall", w.name);
+      if (name2 && name2.trim()) {
+        w.name = name2.trim();
+        saveWalls();
+        renderWallBar();
+      }
+    });
+    wallBar.appendChild(tab);
+  });
+
+  const add = document.createElement("button");
+  add.type = "button";
+  add.className = "wall-add";
+  add.textContent = "+ Add wall";
+  add.title = "Add a new wall";
+  add.addEventListener("click", function () {
+    const name = window.prompt("Name your new wall", "Wall " + (walls.length + 1));
+    if (name && name.trim()) {
+      const w = { id: newId("w"), name: name.trim(), notes: [], drawing: null };
+      walls.push(w);
+      saveWalls();
+      switchWall(w.id);
+    }
+  });
+  wallBar.appendChild(add);
+}
+
+function switchWall(id) {
+  if (id === currentWallId) return;
+  saveDrawing(); // snapshot the current canvas into the current wall
+  currentWallId = id;
+  saveWalls();
+  redrawDrawing(wall.clientWidth, wall.clientHeight);
+  renderNotes();
+  renderWallBar();
+}
+
+function deleteWall(id) {
+  const w = walls.find(function (x) { return x.id === id; });
+  if (!w) return;
+  if (!window.confirm('Delete wall "' + w.name + '" with everything on it?')) return;
+  const idx = walls.indexOf(w);
+  walls.splice(idx, 1);
+  if (!walls.length) {
+    walls.push({ id: newId("w"), name: "My Wall", notes: [], drawing: null });
+  }
+  if (currentWallId === id) {
+    currentWallId = walls[Math.min(idx, walls.length - 1)].id;
+    redrawDrawing(wall.clientWidth, wall.clientHeight);
+    renderNotes();
+  }
+  saveWalls();
+  renderWallBar();
+}
 
 /* ============ tools ============ */
 function setTool(t) {
@@ -238,9 +378,10 @@ wall.addEventListener("mousedown", function (e) {
   if (!activeTool) return; // left button needs a picked tool
   pressed = { x: e.clientX, y: e.clientY, button: 0 };
   strokeActive = false;
-  const start = canvasPoint(e);
+  applyTool(activeTool);
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
+  const start = canvasPoint(e);
   ctx.beginPath();
   ctx.moveTo(start.x, start.y);
 });
@@ -253,14 +394,6 @@ wall.addEventListener("mousemove", function (e) {
     if (!moved) return;
     strokeActive = true;
     if (addBox) { addBox.remove(); addBox = null; }
-    if (activeTool === "eraser") {
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.lineWidth = ERASER_WIDTH;
-    } else {
-      ctx.globalCompositeOperation = "source-over";
-      ctx.strokeStyle = PEN_COLOR;
-      ctx.lineWidth = PEN_WIDTH;
-    }
   }
   const point = canvasPoint(e);
   ctx.lineTo(point.x, point.y);
@@ -293,10 +426,10 @@ document.addEventListener("keydown", function (e) {
 
 /* ============ init ============ */
 function init() {
-  loadNotes();
-  savedDrawing = localStorage.getItem(STORAGE_DRAWING) || null;
+  loadWalls();
   resizeCanvas();
   renderNotes();
+  renderWallBar();
   window.addEventListener("resize", resizeCanvas);
 }
 init();

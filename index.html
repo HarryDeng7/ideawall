@@ -10,6 +10,7 @@
 
 <header class="topbar">
   <h1 class="logo">Idea Wall</h1>
+  <nav id="wallBar" class="wall-bar"></nav>
   <div class="tools">
     <span class="hint">Right-click to add an idea - pick a tool, then hold left click</span>
     <button id="penBtn" class="tool-btn" type="button" title="Draw">
@@ -25,7 +26,7 @@
   <canvas id="drawCanvas"></canvas>
   <div id="notesLayer" class="notes-layer"></div>
   <div id="emptyHint" class="empty-hint hidden">
-    <p class="empty-title">Your wall is empty</p>
+    <p id="emptyTitle" class="empty-title">Your wall is empty</p>
     <p>Right-click anywhere to stick your first idea</p>
   </div>
 </main>

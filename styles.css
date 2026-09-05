@@ -35,6 +35,7 @@ body {
 }
 
 .logo {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -52,7 +53,7 @@ body {
   box-shadow: 0 2px 6px rgba(245, 158, 11, 0.5);
 }
 
-.tools { display: flex; align-items: center; gap: 8px; }
+.tools { display: flex; align-items: center; gap: 8px; flex: none; }
 
 .hint {
   font-size: 12px;
@@ -60,6 +61,74 @@ body {
   margin-right: 6px;
 }
 @media (max-width: 720px) { .hint { display: none; } }
+
+/* ---------- wall tabs ---------- */
+.wall-bar {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 14px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.wall-bar::-webkit-scrollbar { height: 4px; }
+.wall-bar::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 2px; }
+
+.wall-tab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 13px;
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color .15s, border-color .15s, box-shadow .15s;
+}
+.wall-tab:hover { color: var(--text); border-color: rgba(148, 163, 184, 0.35); }
+.wall-tab.active {
+  color: #fde68a;
+  font-weight: 600;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18), 0 0 12px rgba(245, 158, 11, 0.22);
+}
+
+.wall-tab-del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity .15s, background .15s, color .15s;
+}
+.wall-tab:hover .wall-tab-del { opacity: 1; }
+.wall-tab-del:hover { background: #f87171; color: #fff; }
+
+.wall-add {
+  flex: none;
+  padding: 6px 14px;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 13px;
+  border: 1.5px dashed rgba(148, 163, 184, 0.45);
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color .15s, border-color .15s;
+}
+.wall-add:hover { color: var(--text); border-color: var(--accent); }
 
 .tool-btn {
   display: flex;
@@ -70,7 +139,7 @@ body {
   background: var(--panel);
   color: var(--muted);
   border: 1px solid rgba(148, 163, 184, 0.25);
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   transition: color .15s, border-color .15s, background .15s, transform .12s;
 }
@@ -102,7 +171,7 @@ body {
   background-repeat: repeat, repeat, no-repeat, no-repeat;
 }
 
-#drawCanvas { position: absolute; inset: 0; }
+#drawCanvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 
 .notes-layer { position: absolute; inset: 0; }
 
