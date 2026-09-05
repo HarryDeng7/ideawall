@@ -82,6 +82,9 @@ function loadWalls() {
 function resizeCanvas() {
   const rect = wall.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
+  // inline size keeps the canvas exactly on the wall even if the CSS is stale
+  canvas.style.width = rect.width + "px";
+  canvas.style.height = rect.height + "px";
   canvas.width = Math.round(rect.width * dpr);
   canvas.height = Math.round(rect.height * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
