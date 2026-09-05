@@ -198,10 +198,7 @@ body {
 }
 .tool-cursor .eraser-ring {
   position: absolute;
-  left: -21px; /* centered on the pointer; diameter matches ERASER_WIDTH (42px) */
-  top: -21px;
-  width: 42px;
-  height: 42px;
+  /* size and centering offsets are set from JS to match the eraser size */
   align-items: center;
   justify-content: center;
   border: 2px solid rgba(245, 158, 11, 0.95);
@@ -209,6 +206,76 @@ body {
   background: rgba(255, 255, 255, 0.16);
   color: #f59e0b;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* ---------- tool option panels ---------- */
+.context-panel {
+  position: fixed;
+  z-index: 60;
+  width: 204px;
+  padding: 10px;
+  background: rgba(30, 41, 59, 0.97);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+}
+.context-panel.hidden { display: none; }
+.ctx-section { margin-bottom: 9px; }
+.ctx-section:last-child { margin-bottom: 0; }
+.ctx-label {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.4px;
+  margin-bottom: 5px;
+}
+.ctx-row { display: flex; align-items: center; gap: 6px; }
+.ctx-opt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.ctx-opt:hover { color: var(--text); background: rgba(148, 163, 184, 0.12); }
+.ctx-opt.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(245, 158, 11, 0.12);
+}
+.ctx-opt .dot { display: block; border-radius: 50%; background: #e2e8f0; }
+.dot.d2 { width: 6px; height: 6px; }
+.dot.d4 { width: 10px; height: 10px; }
+.dot.d8 { width: 14px; height: 14px; }
+.ctx-swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid rgba(148, 163, 184, 0.35);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform .12s, border-color .15s, box-shadow .15s;
+}
+.ctx-swatch:hover { transform: scale(1.15); }
+.ctx-swatch.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.4);
+}
+.slider-row { gap: 10px; }
+.ctx-range { flex: 1; accent-color: var(--accent); }
+.ctx-value {
+  font-size: 12px;
+  color: var(--text);
+  min-width: 26px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- sticky notes ---------- */

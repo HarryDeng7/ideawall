@@ -19,6 +19,11 @@ const closeBtn = document.getElementById("closeBtn");
 const penBtn = document.getElementById("penBtn");
 const eraserBtn = document.getElementById("eraserBtn");
 const toolCursor = document.getElementById("toolCursor");
+const penPanel = document.getElementById("penPanel");
+const eraserPanel = document.getElementById("eraserPanel");
+const eraserRange = document.getElementById("eraserRange");
+const eraserSizeLabel = document.getElementById("eraserSizeLabel");
+const eraserRing = document.getElementById("eraserRing");
 
 /* ============ constants ============ */
 const STORAGE_WALLS = "ideaWall.walls";
@@ -26,9 +31,6 @@ const STORAGE_CURRENT = "ideaWall.current";
 const STORAGE_NOTES = "ideaWall.notes";     // legacy keys (single-wall era)
 const STORAGE_DRAWING = "ideaWall.drawing";
 const NOTE_COLOR = "#fff176";               // classic sticky-note yellow
-const PEN_COLOR = "rgba(43, 27, 13, 0.88)"; // dark marker on the wood wall
-const PEN_WIDTH = 3;
-const ERASER_WIDTH = 42;
 const DRAG_THRESHOLD = 5; // px of movement before a press becomes a stroke
 
 /* ============ state ============ */
@@ -39,6 +41,12 @@ let pressed = null;      // press point { x, y, button }
 let strokeActive = false; // a drag has become a stroke
 let addBox = null;       // current add-note input element
 let currentNoteId = null; // note id shown in the modal
+let penMode = "free";     // "free" | "line" | "arrow"
+let penColor = "#2b1b0d"; // current ink color
+let penWidth = 4;         // current ink width
+let eraserWidth = 42;     // current eraser size
+let strokeStart = null;   // line/arrow anchor (buffer coords)
+let strokeSnap = null;    // snapshot used for line/arrow preview
 
 /* ============ walls ============ */
 function currentWall() {
@@ -96,13 +104,18 @@ function redrawDrawing(w, h) {
   ctx.clearRect(0, 0, w, h);
   const wl = currentWall();
   if (!wl || !wl.drawing) return;
+  const d = wl.drawing;
   const img = new Image();
   img.onload = function () {
-    // draw 1:1 (natural size): ink keeps its original position even
-    // after the window resizes - never stretch it to the new size
-    ctx.drawImage(img, 0, 0);
+    if (typeof d === "string") {
+      // legacy plain dataURL: fill the current size once
+      ctx.drawImage(img, 0, 0, w, h);
+    } else {
+      // draw at the size the ink was saved at, so it never stretches
+      ctx.drawImage(img, 0, 0, d.w, d.h);
+    }
   };
-  img.src = wl.drawing;
+  img.src = (typeof d === "string") ? d : d.url;
 }
 
 /* maps a mouse event to canvas buffer coordinates, so ink lands
@@ -118,19 +131,71 @@ function canvasPoint(e) {
 function applyTool(t) {
   if (t === "eraser") {
     ctx.globalCompositeOperation = "destination-out";
-    ctx.lineWidth = ERASER_WIDTH;
+    ctx.lineWidth = eraserWidth;
   } else {
     ctx.globalCompositeOperation = "source-over";
-    ctx.strokeStyle = PEN_COLOR;
-    ctx.lineWidth = PEN_WIDTH;
+    ctx.strokeStyle = penColor;
+    ctx.lineWidth = penWidth;
   }
 }
 
 function saveDrawing() {
   const wl = currentWall();
   if (!wl) return;
-  wl.drawing = canvas.toDataURL();
+  wl.drawing = {
+    url: canvas.toDataURL(),
+    w: canvas.clientWidth,
+    h: canvas.clientHeight
+  };
   saveWalls();
+}
+
+/* snapshots and shape drawing for line / arrow preview */
+function snapshotCanvas() {
+  const c = document.createElement("canvas");
+  c.width = canvas.width;
+  c.height = canvas.height;
+  c.getContext("2d").drawImage(canvas, 0, 0);
+  return c;
+}
+
+function restoreSnapshot(snap) {
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(snap, 0, 0);
+  ctx.restore();
+}
+
+function drawShape(a, b) {
+  if (penMode === "arrow") {
+    drawArrow(a.x, a.y, b.x, b.y);
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+}
+
+function drawArrow(x1, y1, x2, y2) {
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const scale = canvas.width / canvas.getBoundingClientRect().width;
+  const headLen = Math.max(12, penWidth * 4) * scale;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  const a1 = angle + Math.PI / 6.2;
+  const a2 = angle - Math.PI / 6.2;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - headLen * Math.cos(a1), y2 - headLen * Math.sin(a1));
+  ctx.lineTo(x2 - headLen * Math.cos(a2), y2 - headLen * Math.sin(a2));
+  ctx.closePath();
+  ctx.fillStyle = penColor;
+  ctx.fill();
+  ctx.stroke();
 }
 
 /* ============ notes ============ */
@@ -396,6 +461,83 @@ document.documentElement.addEventListener("mouseleave", function () {
   toolCursor.classList.add("hidden");
 });
 
+/* ============ tool option panels (right-click the pen / eraser icon) ============ */
+function hidePanels() {
+  penPanel.classList.add("hidden");
+  eraserPanel.classList.add("hidden");
+}
+
+function placePanel(panel, btn) {
+  const r = btn.getBoundingClientRect();
+  const pw = panel.offsetWidth;
+  const ph = panel.offsetHeight;
+  let left = Math.min(r.right - pw, window.innerWidth - pw - 8);
+  left = Math.max(8, left);
+  let top = r.bottom + 8;
+  if (top + ph > window.innerHeight - 8) top = r.top - ph - 8;
+  top = Math.max(8, top);
+  panel.style.left = left + "px";
+  panel.style.top = top + "px";
+}
+
+function syncPenPanel() {
+  penPanel.querySelectorAll("[data-mode]").forEach(function (b) {
+    b.classList.toggle("active", b.dataset.mode === penMode);
+  });
+  penPanel.querySelectorAll("[data-width]").forEach(function (b) {
+    b.classList.toggle("active", Number(b.dataset.width) === penWidth);
+  });
+  penPanel.querySelectorAll("[data-color]").forEach(function (b) {
+    b.classList.toggle("active", b.dataset.color === penColor);
+  });
+}
+
+function togglePanel(panel, btn) {
+  const wasHidden = panel.classList.contains("hidden");
+  hidePanels();
+  if (!wasHidden) return;
+  panel.classList.remove("hidden");
+  placePanel(panel, btn);
+  if (panel === penPanel) syncPenPanel();
+}
+
+penBtn.addEventListener("contextmenu", function (e) {
+  e.preventDefault();
+  togglePanel(penPanel, penBtn);
+});
+eraserBtn.addEventListener("contextmenu", function (e) {
+  e.preventDefault();
+  togglePanel(eraserPanel, eraserBtn);
+});
+
+penPanel.addEventListener("click", function (e) {
+  const modeBtn = e.target.closest("[data-mode]");
+  if (modeBtn) { penMode = modeBtn.dataset.mode; syncPenPanel(); return; }
+  const widthBtn = e.target.closest("[data-width]");
+  if (widthBtn) { penWidth = Number(widthBtn.dataset.width); syncPenPanel(); return; }
+  const colorBtn = e.target.closest("[data-color]");
+  if (colorBtn) { penColor = colorBtn.dataset.color; syncPenPanel(); return; }
+});
+
+eraserRange.addEventListener("input", function () {
+  eraserWidth = Number(eraserRange.value);
+  eraserSizeLabel.textContent = String(eraserWidth);
+  updateEraserRing();
+});
+
+function updateEraserRing() {
+  eraserRing.style.width = eraserWidth + "px";
+  eraserRing.style.height = eraserWidth + "px";
+  eraserRing.style.left = (-eraserWidth / 2) + "px";
+  eraserRing.style.top = (-eraserWidth / 2) + "px";
+}
+
+document.addEventListener("mousedown", function (e) {
+  if (e.target.closest(".context-panel")) return;
+  if (e.target.closest("#penBtn") || e.target.closest("#eraserBtn")) return;
+  hidePanels();
+});
+
 /* ============ drawing: quick right-click = add note, left-drag with a picked tool = draw or erase ============ */
 wall.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 
@@ -414,8 +556,13 @@ wall.addEventListener("mousedown", function (e) {
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   const start = canvasPoint(e);
-  ctx.beginPath();
-  ctx.moveTo(start.x, start.y);
+  if (activeTool === "draw" && penMode !== "free") {
+    strokeStart = start;
+    strokeSnap = snapshotCanvas();
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+  }
 });
 
 wall.addEventListener("mousemove", function (e) {
@@ -428,6 +575,12 @@ wall.addEventListener("mousemove", function (e) {
     if (addBox) { addBox.remove(); addBox = null; }
   }
   const point = canvasPoint(e);
+  if (activeTool === "draw" && penMode !== "free") {
+    // live preview: restore the snapshot then draw the shape from the anchor
+    restoreSnapshot(strokeSnap);
+    drawShape(strokeStart, point);
+    return;
+  }
   ctx.lineTo(point.x, point.y);
   ctx.stroke();
   ctx.beginPath();
@@ -440,6 +593,8 @@ window.addEventListener("mouseup", function (e) {
   const button = pressed.button;
   pressed = null;
   strokeActive = false;
+  strokeStart = null;
+  strokeSnap = null;
   if (wasDrawing) saveDrawing();
   else if (button === 2) openAddBox(e.clientX, e.clientY);
 });
@@ -447,11 +602,14 @@ window.addEventListener("mouseup", function (e) {
 window.addEventListener("blur", function () {
   pressed = null;
   strokeActive = false;
+  strokeStart = null;
+  strokeSnap = null;
 });
 
 /* ============ keyboard ============ */
 document.addEventListener("keydown", function (e) {
   if (e.key !== "Escape") return;
+  hidePanels();
   if (!modal.classList.contains("hidden")) closeModal();
   else if (addBox) { addBox.remove(); addBox = null; }
 });
@@ -462,6 +620,7 @@ function init() {
   resizeCanvas();
   renderNotes();
   renderWallBar();
+  updateEraserRing();
   window.addEventListener("resize", resizeCanvas);
 }
 init();
