@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Idea Wall</title>
-<link rel="stylesheet" href="styles.css?v=2">
+<link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
 
@@ -29,6 +29,21 @@
     <p id="emptyTitle" class="empty-title">Your wall is empty</p>
     <p>Right-click anywhere to stick your first idea</p>
   </div>
+
+  <div id="toolCursor" class="tool-cursor hidden">
+    <div class="pen-ic">
+      <svg width="22" height="26" viewBox="0 0 22 26" xmlns="http://www.w3.org/2000/svg">
+        <rect x="6" y="0" width="10" height="3" rx="1.5" fill="#f87171"/>
+        <rect x="6" y="3" width="10" height="2.5" fill="#94a3b8"/>
+        <rect x="6" y="5.5" width="10" height="9.5" rx="1" fill="#f59e0b"/>
+        <path d="M6 15 L11 25 L16 15 Z" fill="#fcd9b6"/>
+        <path d="M9.7 15 L11 25 L12.3 15 Z" fill="#334155"/>
+      </svg>
+    </div>
+    <div class="eraser-ring">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
+    </div>
+  </div>
 </main>
 
 <div id="noteModal" class="modal-overlay hidden">
@@ -46,6 +61,6 @@
   </div>
 </div>
 
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

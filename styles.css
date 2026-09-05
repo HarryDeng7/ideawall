@@ -175,6 +175,42 @@ body {
 
 .notes-layer { position: absolute; inset: 0; }
 
+/* ---------- tool cursor (pen tip / eraser range) ---------- */
+.tool-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+.tool-cursor.hidden { display: none; }
+.tool-cursor .pen-ic,
+.tool-cursor .eraser-ring { display: none; }
+.tool-cursor.mode-draw .pen-ic { display: block; }
+.tool-cursor.mode-eraser .eraser-ring { display: flex; }
+
+.tool-cursor .pen-ic {
+  position: absolute;
+  left: -11px; /* pencil tip (11,25) sits exactly on the pointer */
+  top: -25px;
+  line-height: 0;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+.tool-cursor .eraser-ring {
+  position: absolute;
+  left: -21px; /* centered on the pointer; diameter matches ERASER_WIDTH (42px) */
+  top: -21px;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(245, 158, 11, 0.95);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: #f59e0b;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
 /* ---------- sticky notes ---------- */
 .note {
   position: absolute;

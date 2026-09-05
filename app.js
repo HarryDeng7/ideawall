@@ -18,6 +18,7 @@ const deleteBtn = document.getElementById("deleteBtn");
 const closeBtn = document.getElementById("closeBtn");
 const penBtn = document.getElementById("penBtn");
 const eraserBtn = document.getElementById("eraserBtn");
+const toolCursor = document.getElementById("toolCursor");
 
 /* ============ constants ============ */
 const STORAGE_WALLS = "ideaWall.walls";
@@ -362,10 +363,32 @@ function setTool(t) {
   activeTool = (activeTool === t) ? null : t;
   penBtn.classList.toggle("active", activeTool === "draw");
   eraserBtn.classList.toggle("active", activeTool === "eraser");
-  wall.style.cursor = activeTool === "draw" ? "crosshair" : (activeTool === "eraser" ? "cell" : "default");
+  // hide the OS cursor over the wall; the pencil/eraser overlay replaces it
+  wall.style.cursor = activeTool ? "none" : "default";
+  toolCursor.classList.toggle("mode-draw", activeTool === "draw");
+  toolCursor.classList.toggle("mode-eraser", activeTool === "eraser");
+  if (!activeTool) toolCursor.classList.add("hidden");
 }
 penBtn.addEventListener("click", function () { setTool("draw"); });
 eraserBtn.addEventListener("click", function () { setTool("eraser"); });
+
+/* cursor overlay: the pencil tip / eraser range follows the pointer */
+document.addEventListener("mousemove", function (e) {
+  if (!activeTool || !e.target || !e.target.closest) return;
+  const overWall = e.target.closest(".wall");
+  const blocked = e.target.closest(".note") || e.target.closest(".add-note");
+  if (!overWall || blocked) {
+    toolCursor.classList.add("hidden");
+    return;
+  }
+  toolCursor.classList.remove("hidden");
+  const r = wall.getBoundingClientRect();
+  toolCursor.style.left = (e.clientX - r.left) + "px";
+  toolCursor.style.top = (e.clientY - r.top) + "px";
+});
+document.documentElement.addEventListener("mouseleave", function () {
+  toolCursor.classList.add("hidden");
+});
 
 /* ============ drawing: quick right-click = add note, left-drag with a picked tool = draw or erase ============ */
 wall.addEventListener("contextmenu", function (e) { e.preventDefault(); });
