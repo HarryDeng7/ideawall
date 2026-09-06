@@ -38,7 +38,7 @@ const DRAG_THRESHOLD = 5; // px of movement before a press becomes a stroke
 let walls = [];          // { id, name, notes: [...], drawing: dataURL|null }
 let currentWallId = null;
 let activeTool = null;   // null | "draw" | "eraser" (picked in the toolbar)
-let pressed = null;      // press point { x, y, button }
+let pressed = null;      // press point { x, y, button, hadTool, moved }
 let strokeActive = false; // a drag has become a stroke
 let addBox = null;       // current add-note input element
 let currentNoteId = null; // note id shown in the modal
@@ -264,8 +264,9 @@ function openAddBox(x, y) {
   function cleanup() {
     if (addBox !== box) return;
     ta.removeEventListener("keydown", onKey);
-    box.remove();
+    ta.removeEventListener("blur", cleanup);
     addBox = null;
+    box.remove();
   }
   function onKey(e) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -606,19 +607,15 @@ document.addEventListener("mousedown", function (e) {
   hidePanels();
 });
 
-/* ============ drawing: quick right-click = add note, left-drag with a picked tool = draw or erase ============ */
+/* ============ drawing: quick left-click = add note, left-drag with a picked tool = draw or erase ============ */
 wall.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 
 wall.addEventListener("mousedown", function (e) {
-  if (e.button !== 0 && e.button !== 2) return;
+  if (e.button !== 0) return;
   if (e.target.closest(".note") || e.target.closest(".add-note")) return;
-  if (e.button === 2) {
-    e.preventDefault();
-    pressed = { x: e.clientX, y: e.clientY, button: 2 };
-    return; // right button only adds a note on quick click
-  }
-  if (!activeTool) return; // left button needs a picked tool
-  pressed = { x: e.clientX, y: e.clientY, button: 0 };
+  // left button: no tool -> add a note on release; tool picked -> draw or erase
+  pressed = { x: e.clientX, y: e.clientY, button: 0, hadTool: !!activeTool, moved: false };
+  if (!activeTool) return;
   strokeActive = false;
   applyTool(activeTool);
   ctx.lineCap = "round";
@@ -634,14 +631,15 @@ wall.addEventListener("mousedown", function (e) {
 });
 
 wall.addEventListener("mousemove", function (e) {
-  if (!pressed) return;
-  if (pressed.button !== 0) return;
-  if (!strokeActive) {
+  if (!pressed || pressed.button !== 0) return;
+  if (!pressed.moved) {
     const moved = Math.hypot(e.clientX - pressed.x, e.clientY - pressed.y) > DRAG_THRESHOLD;
     if (!moved) return;
-    strokeActive = true;
+    pressed.moved = true;
     if (addBox) { addBox.remove(); addBox = null; }
   }
+  if (!activeTool) return; // no tool: a drag just cancels the click-to-add
+  if (!strokeActive) strokeActive = true;
   const point = canvasPoint(e);
   if (activeTool === "draw" && penMode !== "free") {
     // live preview: restore the snapshot then draw the shape from the anchor
@@ -658,13 +656,14 @@ wall.addEventListener("mousemove", function (e) {
 window.addEventListener("mouseup", function (e) {
   if (!pressed || e.button !== pressed.button) return;
   const wasDrawing = strokeActive;
-  const button = pressed.button;
+  const hadTool = pressed.hadTool;
+  const wasMoved = pressed.moved;
   pressed = null;
   strokeActive = false;
   strokeStart = null;
   strokeSnap = null;
   if (wasDrawing) saveDrawing();
-  else if (button === 2) openAddBox(e.clientX, e.clientY);
+  else if (!hadTool && !wasMoved) openAddBox(e.clientX, e.clientY);
 });
 
 window.addEventListener("blur", function () {
