@@ -403,11 +403,11 @@ textPanel.addEventListener("mousedown", function (e) {
 
 textPanel.addEventListener("click", function (e) {
   const fontBtn = e.target.closest("[data-font]");
-  if (fontBtn) { applyTextStyle("fontFamily", fontBtn.dataset.font); return; }
+  if (fontBtn) { applyTextStyle("fontFamily", fontBtn.dataset.font); textPanel.classList.add("hidden"); return; }
   const sizeBtn = e.target.closest("[data-size]");
-  if (sizeBtn) { applyTextStyle("fontSize", sizeBtn.dataset.size + "px"); return; }
+  if (sizeBtn) { applyTextStyle("fontSize", sizeBtn.dataset.size + "px"); textPanel.classList.add("hidden"); return; }
   const colorBtn = e.target.closest("[data-color]");
-  if (colorBtn) { applyTextStyle("color", colorBtn.dataset.color); return; }
+  if (colorBtn) { applyTextStyle("color", colorBtn.dataset.color); textPanel.classList.add("hidden"); return; }
 });
 
 /* ============ wall tabs ============ */
