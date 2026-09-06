@@ -24,6 +24,7 @@ const eraserPanel = document.getElementById("eraserPanel");
 const eraserRange = document.getElementById("eraserRange");
 const eraserSizeLabel = document.getElementById("eraserSizeLabel");
 const eraserRing = document.getElementById("eraserRing");
+const textPanel = document.getElementById("textPanel");
 
 /* ============ constants ============ */
 const STORAGE_WALLS = "ideaWall.walls";
@@ -212,7 +213,11 @@ function renderNotes() {
     el.style.transform = "rotate(" + note.rot + "deg)";
     const p = document.createElement("p");
     p.className = "note-text";
-    p.textContent = note.text;
+    if (note.rich) {
+      p.innerHTML = note.text;
+    } else {
+      p.textContent = note.text;
+    }
     el.appendChild(p);
     notesLayer.appendChild(el);
   });
@@ -286,8 +291,13 @@ notesLayer.addEventListener("click", function (e) {
 
 function openModal(note) {
   currentNoteId = note.id;
-  modalText.textContent = note.text;
-  modalEdit.value = note.text;
+  if (note.rich) {
+    modalText.innerHTML = note.text;
+    modalEdit.innerHTML = note.text;
+  } else {
+    modalText.textContent = note.text;
+    modalEdit.textContent = note.text;
+  }
   modalNote.style.background = NOTE_COLOR;
   modalText.classList.remove("hidden");
   modalEdit.classList.add("hidden");
@@ -311,11 +321,12 @@ editBtn.addEventListener("click", function () {
 
 saveBtn.addEventListener("click", function () {
   const wl = currentWall();
-  const text = modalEdit.value.trim();
-  if (wl && text) {
+  const plain = modalEdit.textContent.trim();
+  if (wl && plain) {
     const note = wl.notes.find(function (n) { return n.id === currentNoteId; });
     if (note) {
-      note.text = text;
+      note.text = modalEdit.innerHTML;
+      note.rich = true;
       saveWalls();
       renderNotes();
     }
@@ -338,7 +349,64 @@ modal.addEventListener("mousedown", function (e) {
   if (e.target === modal) closeModal();
 });
 modalEdit.addEventListener("keydown", function (e) {
-  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) saveBtn.click();
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { saveBtn.click(); return; }
+  if (e.key === "Enter" && !e.shiftKey) {
+    // keep the note a flat inline document so styling spans never wrap blocks
+    e.preventDefault();
+    document.execCommand("insertLineBreak");
+  }
+});
+
+/* ============ rich-text menu (drag-select text, right-click to style it) ============ */
+function placeTextPanel(x, y) {
+  const pw = textPanel.offsetWidth;
+  const ph = textPanel.offsetHeight;
+  let left = Math.min(x - 10, window.innerWidth - pw - 8);
+  left = Math.max(8, left);
+  let top = y + 8;
+  if (top + ph > window.innerHeight - 8) top = y - ph - 8;
+  top = Math.max(8, top);
+  textPanel.style.left = left + "px";
+  textPanel.style.top = top + "px";
+}
+
+function applyTextStyle(prop, value) {
+  const sel = window.getSelection();
+  if (!sel.rangeCount || sel.isCollapsed) return;
+  const range = sel.getRangeAt(0);
+  const span = document.createElement("span");
+  span.style[prop] = value;
+  span.appendChild(range.extractContents());
+  range.insertNode(span);
+  const after = document.createRange();
+  after.selectNodeContents(span);
+  sel.removeAllRanges();
+  sel.addRange(after);
+  modalEdit.focus();
+}
+
+modalEdit.addEventListener("contextmenu", function (e) {
+  const sel = window.getSelection();
+  if (!sel.rangeCount || sel.isCollapsed) return; // no selection: browser menu
+  const range = sel.getRangeAt(0);
+  if (!modalEdit.contains(range.commonAncestorContainer)) return;
+  e.preventDefault();
+  hidePanels();
+  textPanel.classList.remove("hidden");
+  placeTextPanel(e.clientX, e.clientY);
+});
+
+textPanel.addEventListener("mousedown", function (e) {
+  e.preventDefault(); // keep the text selection while picking an option
+});
+
+textPanel.addEventListener("click", function (e) {
+  const fontBtn = e.target.closest("[data-font]");
+  if (fontBtn) { applyTextStyle("fontFamily", fontBtn.dataset.font); return; }
+  const sizeBtn = e.target.closest("[data-size]");
+  if (sizeBtn) { applyTextStyle("fontSize", sizeBtn.dataset.size + "px"); return; }
+  const colorBtn = e.target.closest("[data-color]");
+  if (colorBtn) { applyTextStyle("color", colorBtn.dataset.color); return; }
 });
 
 /* ============ wall tabs ============ */
@@ -462,8 +530,9 @@ document.documentElement.addEventListener("mouseleave", function () {
 
 /* ============ tool option panels (right-click the pen / eraser icon) ============ */
 function hidePanels() {
-  penPanel.classList.add("hidden");
-  eraserPanel.classList.add("hidden");
+  document.querySelectorAll(".context-panel").forEach(function (p) {
+    p.classList.add("hidden");
+  });
 }
 
 function placePanel(panel, btn) {

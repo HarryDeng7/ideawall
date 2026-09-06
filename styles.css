@@ -278,6 +278,24 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* text styling panel (select text in the editor, right-click it) */
+.text-panel { width: 264px; }
+.ctx-font, .ctx-size {
+  flex: none;
+  padding: 5px 0;
+  width: 44px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.ctx-size { width: 40px; }
+.ctx-font:hover, .ctx-size:hover { color: var(--text); background: rgba(148, 163, 184, 0.12); }
+
 /* ---------- sticky notes ---------- */
 .note {
   position: absolute;
@@ -375,16 +393,26 @@ body {
   word-break: break-word;
 }
 .modal-edit {
+  display: block;
   width: 100%;
   min-height: 130px;
+  max-height: 260px;
   padding: 10px;
   background: rgba(255, 255, 255, 0.85);
   border: 2px solid var(--accent);
   border-radius: 6px;
   outline: none;
-  resize: vertical;
+  overflow-y: auto;
+  user-select: text;
+  cursor: text;
+  white-space: pre-wrap;
+  word-break: break-word;
   font: 14px/1.5 "Segoe UI", system-ui, sans-serif;
   color: #1f2937;
+}
+.modal-edit:empty::before {
+  content: attr(data-placeholder);
+  color: rgba(31, 41, 55, 0.45);
 }
 .modal-actions {
   display: flex;

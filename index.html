@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Idea Wall</title>
-<link rel="stylesheet" href="styles.css?v=6">
+<link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
 
@@ -68,6 +68,40 @@
   </div>
 </div>
 
+<div id="textPanel" class="context-panel text-panel hidden">
+  <div class="ctx-section">
+    <span class="ctx-label">Font</span>
+    <div class="ctx-row">
+      <button type="button" class="ctx-font" data-font="inherit">默认</button>
+      <button type="button" class="ctx-font" data-font="SimSun, '宋体', serif">宋体</button>
+      <button type="button" class="ctx-font" data-font="SimHei, '黑体', sans-serif">黑体</button>
+      <button type="button" class="ctx-font" data-font="KaiTi, '楷体', serif">楷体</button>
+      <button type="button" class="ctx-font" data-font="'Microsoft YaHei', '微软雅黑', sans-serif">雅黑</button>
+    </div>
+  </div>
+  <div class="ctx-section">
+    <span class="ctx-label">Size</span>
+    <div class="ctx-row">
+      <button type="button" class="ctx-size" data-size="14">14</button>
+      <button type="button" class="ctx-size" data-size="18">18</button>
+      <button type="button" class="ctx-size" data-size="22">22</button>
+      <button type="button" class="ctx-size" data-size="28">28</button>
+      <button type="button" class="ctx-size" data-size="36">36</button>
+    </div>
+  </div>
+  <div class="ctx-section">
+    <span class="ctx-label">Color</span>
+    <div class="ctx-row">
+      <button type="button" class="ctx-swatch" data-color="#1f2937" style="background:#1f2937" title="Black"></button>
+      <button type="button" class="ctx-swatch" data-color="#2b1b0d" style="background:#2b1b0d" title="Dark brown"></button>
+      <button type="button" class="ctx-swatch" data-color="#dc2626" style="background:#dc2626" title="Red"></button>
+      <button type="button" class="ctx-swatch" data-color="#2563eb" style="background:#2563eb" title="Blue"></button>
+      <button type="button" class="ctx-swatch" data-color="#16a34a" style="background:#16a34a" title="Green"></button>
+      <button type="button" class="ctx-swatch" data-color="#f59e0b" style="background:#f59e0b" title="Orange"></button>
+    </div>
+  </div>
+</div>
+
 <main id="wall" class="wall">
   <canvas id="drawCanvas"></canvas>
   <div id="notesLayer" class="notes-layer"></div>
@@ -96,7 +130,7 @@
   <div class="modal-card">
     <div id="modalNote" class="modal-note">
       <p id="modalText" class="modal-text"></p>
-      <textarea id="modalEdit" class="modal-edit hidden"></textarea>
+      <div id="modalEdit" class="modal-edit hidden" contenteditable="true" spellcheck="false" data-placeholder="Write something..."></div>
     </div>
     <div class="modal-actions">
       <button id="editBtn" class="btn" type="button">Edit</button>
@@ -107,6 +141,6 @@
   </div>
 </div>
 
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>
