@@ -118,13 +118,13 @@ function redrawDrawing(w, h) {
   img.src = (typeof d === "string") ? d : d.url;
 }
 
-/* maps a mouse event to canvas buffer coordinates, so ink lands
-   exactly under the cursor regardless of zoom or display scaling */
+/* maps a mouse event to canvas drawing coordinates (CSS px); the
+   canvas transform scales them to the buffer for any display DPI */
 function canvasPoint(e) {
   const rect = canvas.getBoundingClientRect();
   return {
-    x: (e.clientX - rect.left) * (canvas.width / rect.width),
-    y: (e.clientY - rect.top) * (canvas.height / rect.height)
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
   };
 }
 
@@ -180,8 +180,7 @@ function drawShape(a, b) {
 
 function drawArrow(x1, y1, x2, y2) {
   const angle = Math.atan2(y2 - y1, x2 - x1);
-  const scale = canvas.width / canvas.getBoundingClientRect().width;
-  const headLen = Math.max(12, penWidth * 4) * scale;
+  const headLen = Math.max(12, penWidth * 4);
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
@@ -449,13 +448,13 @@ document.addEventListener("mousemove", function (e) {
     return;
   }
   toolCursor.classList.remove("hidden");
-  // anchor the icon to the exact point the ink will land on, computed
-  // through the same buffer mapping the drawing itself uses
+  // anchor the icon to the exact point the ink will land on (CSS px,
+  // the same coordinate space the drawing uses)
   const crect = canvas.getBoundingClientRect();
   const point = canvasPoint(e);
   const wrect = wall.getBoundingClientRect();
-  toolCursor.style.left = (crect.left + point.x * (crect.width / canvas.width) - wrect.left) + "px";
-  toolCursor.style.top = (crect.top + point.y * (crect.height / canvas.height) - wrect.top) + "px";
+  toolCursor.style.left = (crect.left + point.x - wrect.left) + "px";
+  toolCursor.style.top = (crect.top + point.y - wrect.top) + "px";
 });
 document.documentElement.addEventListener("mouseleave", function () {
   toolCursor.classList.add("hidden");
